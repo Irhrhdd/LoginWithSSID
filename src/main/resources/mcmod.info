@@ -1,0 +1,13 @@
+[{
+  "modid": "ssidmod",
+  "name": "SSID Account Switcher",
+  "description": "Switch accounts using SSID from the main menu.",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "authorList": ["You"],
+  "credits": "Made with ChatGPT",
+  "logoFile": "",
+  "url": "",
+  "updateUrl": "",
+  "screenshots": []
+}]
