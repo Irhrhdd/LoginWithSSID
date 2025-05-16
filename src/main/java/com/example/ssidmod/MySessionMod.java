@@ -11,6 +11,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -47,6 +48,7 @@ public class MySessionMod {
         @Override
         public void initGui() {
             this.ssidField = new GuiTextField(0, fontRendererObj, width / 2 - 100, height / 2 - 10, 200, 20);
+            this.ssidField.setFocused(true);
             this.loginButton = new GuiButton(1, width / 2 - 100, height / 2 + 15, "Login with SSID");
             this.buttonList.add(loginButton);
         }
@@ -54,8 +56,12 @@ public class MySessionMod {
         @Override
         protected void actionPerformed(GuiButton button) {
             if (button.id == 1) {
-                String ssid = ssidField.getText();
-                new Thread(() -> switchAccount(ssid)).start();
+                String ssid = ssidField.getText().trim();
+                if (!ssid.isEmpty()) {
+                    switchAccount(ssid);
+                } else {
+                    mc.thePlayer.addChatMessage(new ChatComponentText("§cSSID cannot be empty."));
+                }
             }
         }
 
@@ -79,44 +85,49 @@ public class MySessionMod {
         }
 
         private void switchAccount(String ssid) {
-            try {
-                URL url = new URL("https://session.minecraft.net/session/minecraft/profile/by-ssid/" + ssid);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("GET");
+            new Thread(() -> {
+                try {
+                    URL url = new URL("https://session.minecraft.net/session/minecraft/profile/by-ssid/" + ssid);
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("GET");
 
-                Scanner scanner = new Scanner(conn.getInputStream()).useDelimiter("\\A");
-                String response = scanner.hasNext() ? scanner.next() : "";
+                    InputStream is = conn.getInputStream();
+                    Scanner scanner = new Scanner(is).useDelimiter("\\A");
+                    String response = scanner.hasNext() ? scanner.next() : "";
+                    scanner.close();
+                    is.close();
 
-                if (response.contains("\"id\"") && response.contains("\"name\"")) {
-                    String uuid = response.split("\"id\":\"")[1].split("\"")[0];
-                    String name = response.split("\"name\":\"")[1].split("\"")[0];
-                    String token = ssid;
+                    if (response.contains("\"id\"") && response.contains("\"name\"")) {
+                        String uuid = response.split("\"id\":\"")[1].split("\"")[0];
+                        String name = response.split("\"name\":\"")[1].split("\"")[0];
 
-                    Session session = new Session(name, uuid, token, "mojang");
+                        Session session = new Session(name, uuid, ssid, "mojang");
 
-                    Field sessionField = Minecraft.class.getDeclaredField("session");
-                    sessionField.setAccessible(true);
-                    sessionField.set(mc, session);
+                        Field sessionField = Minecraft.class.getDeclaredField("session");
+                        sessionField.setAccessible(true);
+                        sessionField.set(mc, session);
 
+                        mc.addScheduledTask(() -> {
+                            mc.displayGuiScreen(new GuiMultiplayer(null));
+                            IChatComponent msg = new ChatComponentText("§aSwitched to: " + name + " (" + uuid + ")");
+                            mc.ingameGUI.getChatGUI().printChatMessage(msg);
+                        });
+                    } else {
+                        mc.addScheduledTask(() -> {
+                            mc.displayGuiScreen(new GuiMultiplayer(null));
+                            IChatComponent msg = new ChatComponentText("§cInvalid SSID: Unable to retrieve account information.");
+                            mc.ingameGUI.getChatGUI().printChatMessage(msg);
+                        });
+                    }
+
+                } catch (Exception e) {
                     mc.addScheduledTask(() -> {
                         mc.displayGuiScreen(new GuiMultiplayer(null));
-                        IChatComponent msg = new ChatComponentText("§aSwitched to: " + name + " (" + uuid + ")");
-                        mc.ingameGUI.getChatGUI().printChatMessage(msg);
-                    });
-                } else {
-                    mc.addScheduledTask(() -> {
-                        mc.displayGuiScreen(new GuiMultiplayer(null));
-                        IChatComponent msg = new ChatComponentText("§cInvalid SSID: Unable to retrieve account information.");
+                        IChatComponent msg = new ChatComponentText("§cFailed to switch account: " + e.getClass().getSimpleName() + " - " + e.getMessage());
                         mc.ingameGUI.getChatGUI().printChatMessage(msg);
                     });
                 }
-            } catch (Exception e) {
-                mc.addScheduledTask(() -> {
-                    mc.displayGuiScreen(new GuiMultiplayer(null));
-                    IChatComponent msg = new ChatComponentText("§cFailed to switch account: " + e.getMessage());
-                    mc.ingameGUI.getChatGUI().printChatMessage(msg);
-                });
-            }
+            }).start();
         }
     }
 }
