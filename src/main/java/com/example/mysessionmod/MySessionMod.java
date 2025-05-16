@@ -92,33 +92,33 @@ public class MySessionMod {
                     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                     conn.setRequestMethod("GET");
 
-                    try (InputStream is = conn.getInputStream();
-                         Scanner scanner = new Scanner(is).useDelimiter("\\A")) {
+                    InputStream is = conn.getInputStream();
+                    Scanner scanner = new Scanner(is).useDelimiter("\\A");
+                    String response = scanner.hasNext() ? scanner.next() : "";
+                    scanner.close();
+                    is.close();
 
-                        String response = scanner.hasNext() ? scanner.next() : "";
+                    if (response.contains("\"id\"") && response.contains("\"name\"")) {
+                        String uuid = response.split("\"id\":\"")[1].split("\"")[0];
+                        String name = response.split("\"name\":\"")[1].split("\"")[0];
 
-                        if (response.contains("\"id\"") && response.contains("\"name\"")) {
-                            String uuid = response.split("\"id\":\"")[1].split("\"")[0];
-                            String name = response.split("\"name\":\"")[1].split("\"")[0];
+                        Session session = new Session(name, uuid, ssid, "mojang");
 
-                            Session session = new Session(name, uuid, ssid, "mojang");
+                        Field sessionField = Minecraft.class.getDeclaredField("session");
+                        sessionField.setAccessible(true);
+                        sessionField.set(mc, session);
 
-                            Field sessionField = Minecraft.class.getDeclaredField("session");
-                            sessionField.setAccessible(true);
-                            sessionField.set(mc, session);
-
-                            mc.addScheduledTask(() -> {
-                                mc.displayGuiScreen(new GuiMultiplayer(null));
-                                mc.ingameGUI.getChatGUI().printChatMessage(
-                                    new ChatComponentText("§aSwitched to: " + name + " (" + uuid + ")"));
-                            });
-                        } else {
-                            mc.addScheduledTask(() -> {
-                                mc.displayGuiScreen(new GuiMultiplayer(null));
-                                mc.ingameGUI.getChatGUI().printChatMessage(
-                                    new ChatComponentText("§cInvalid SSID: Unable to retrieve account information."));
-                            });
-                        }
+                        mc.addScheduledTask(() -> {
+                            mc.displayGuiScreen(new GuiMultiplayer(null));
+                            mc.ingameGUI.getChatGUI().printChatMessage(
+                                new ChatComponentText("§aSwitched to: " + name + " (" + uuid + ")"));
+                        });
+                    } else {
+                        mc.addScheduledTask(() -> {
+                            mc.displayGuiScreen(new GuiMultiplayer(null));
+                            mc.ingameGUI.getChatGUI().printChatMessage(
+                                new ChatComponentText("§cInvalid SSID: Unable to retrieve account information."));
+                        });
                     }
 
                 } catch (Exception e) {
