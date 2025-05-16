@@ -1,11 +1,16 @@
-[{
-  "modid": "mysessionmod",
-  "name": "My Session Mod",
-  "description": "A mod to print your own session info.",
-  "version": "1.0",
-  "mcversion": "1.8.9",
-  "authorList": ["You"],
-  "credits": "",
-  "clientSideOnly": true,
-  "serverSideOnly": false
-}]
+[
+  {
+    "modid": "mysessionmod",
+    "name": "MySessionMod",
+    "description": "Allows switching Minecraft accounts via SSID from the server list screen.",
+    "version": "1.0",
+    "mcversion": "1.8.9",
+    "url": "",
+    "updateUrl": "",
+    "authorList": ["Twizzy"],
+    "credits": "Made with Forge 1.8.9",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": []
+  }
+]
