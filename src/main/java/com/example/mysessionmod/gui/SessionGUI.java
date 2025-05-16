@@ -1,8 +1,8 @@
 package com.example.mysessionmod.gui;
 
 import com.example.mysessionmod.MySessionMod;
-import com.example.mysessionmod.utils.APIUtils;
-import com.example.mysessionmod.utils.SessionChanger;
+import com.example.mysessionmod.util.APIUtils;
+import com.example.mysessionmod.util.SessionChanger;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
