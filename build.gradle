@@ -11,7 +11,7 @@ buildscript {
 apply plugin: 'net.minecraftforge.gradle.forge'
 
 version = "1.0"
-group = "com.example.MySessionMod"
+group = "com.example.SessionMod"
 archivesBaseName = "MySessionMod"
 
 sourceCompatibility = targetCompatibility = "1.8"
