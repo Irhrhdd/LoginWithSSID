@@ -1,6 +1,5 @@
-package com.example.ssidmod;
+package com.example.mysessionmod;
 
-import com.mojang.authlib.yggdrasil.YggdrasilUserAuthentication;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.*;
 import net.minecraft.util.ChatComponentText;
@@ -17,8 +16,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Scanner;
 
-@Mod(modid = "ssidmod", name = "SSIDAccountSwitcher", version = "1.0")
-public class SSIDMod {
+@Mod(modid = "mysessionmod", name = "MySessionMod", version = "1.0")
+public class MySessionMod {
 
     private final Minecraft mc = Minecraft.getMinecraft();
 
@@ -67,7 +66,7 @@ public class SSIDMod {
 
         @Override
         protected void mouseClicked(int mouseX, int mouseY, int mouseButton) {
-            super.mouseClicked(mouseX, mouseButton, mouseButton);
+            super.mouseClicked(mouseX, mouseY, mouseButton);
             this.ssidField.mouseClicked(mouseX, mouseY, mouseButton);
         }
 
@@ -88,7 +87,7 @@ public class SSIDMod {
                 Scanner scanner = new Scanner(conn.getInputStream()).useDelimiter("\\A");
                 String response = scanner.hasNext() ? scanner.next() : "";
 
-                if (response.contains("id") && response.contains("name")) {
+                if (response.contains("\"id\"") && response.contains("\"name\"")) {
                     String uuid = response.split("\"id\":\"")[1].split("\"")[0];
                     String name = response.split("\"name\":\"")[1].split("\"")[0];
                     String token = ssid;
@@ -102,6 +101,12 @@ public class SSIDMod {
                     mc.addScheduledTask(() -> {
                         mc.displayGuiScreen(new GuiMultiplayer(null));
                         IChatComponent msg = new ChatComponentText("§aSwitched to: " + name + " (" + uuid + ")");
+                        mc.ingameGUI.getChatGUI().printChatMessage(msg);
+                    });
+                } else {
+                    mc.addScheduledTask(() -> {
+                        mc.displayGuiScreen(new GuiMultiplayer(null));
+                        IChatComponent msg = new ChatComponentText("§cInvalid SSID: Unable to retrieve account information.");
                         mc.ingameGUI.getChatGUI().printChatMessage(msg);
                     });
                 }
