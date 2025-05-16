@@ -1,25 +1,25 @@
 buildscript {
     repositories {
+
         maven { url "https://maven.minecraftforge.net" }
-        mavenCentral()
-        gradlePluginPortal()
     }
     dependencies {
         classpath "net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT"
-        classpath "gradle.plugin.com.github.jengelman.gradle.plugins:shadow-gradle-plugin:7.1.2"
     }
 }
 
-apply plugin: 'java'
-apply plugin: 'net.minecraftforge.gradle.forge'
-apply plugin: 'com.github.johnrengelman.shadow'
+plugins {
+    id "java"
+    id "com.github.johnrengelman.shadow" version "2.0.4"
+}
+
+apply plugin: "net.minecraftforge.gradle.forge"
 
 version = "2.0"
 group = "com.example.mysessionmod"
 archivesBaseName = "MySessionMod"
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+sourceCompatibility = targetCompatibility = 1.8
 compileJava.options.encoding = "UTF-8"
 
 minecraft {
@@ -29,28 +29,33 @@ minecraft {
     makeObfSourceJar = false
 }
 
-repositories {
-    mavenCentral()
-    maven { url "https://libraries.minecraft.net/" }
-}
-
-dependencies {
-    // Add your dependencies here if needed
-}
-
 configurations {
     shade
     compile.extendsFrom(shade)
 }
 
+repositories {
+
+}
+
+dependencies {
+
+}
+
 processResources {
+
     inputs.property "version", project.version
     inputs.property "mcversion", project.minecraft.version
 
+
     from(sourceSets.main.resources.srcDirs) {
         include "mcmod.info"
-        expand "version": project.version, "mcversion": project.minecraft.version
+
+
+        expand "version":project.version, "mcversion":project.minecraft.version
     }
+
+
     from(sourceSets.main.resources.srcDirs) {
         exclude "mcmod.info"
     }
@@ -59,11 +64,15 @@ processResources {
 }
 
 shadowJar {
+    dependencies {
+
+    }
     configurations = [project.configurations.shade]
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    classifier = ""
+    duplicatesStrategy DuplicatesStrategy.EXCLUDE
+    classifier ""
 }
 
 reobf {
+
     shadowJar {}
 }
