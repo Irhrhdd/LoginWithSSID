@@ -1,165 +1,71 @@
 package com.example.mysessionmod;
 
+import com.example.mysessionmod.gui.ChangerGUI;
+import com.example.mysessionmod.gui.SessionGUI;
+import com.example.mysessionmod.util.APIUtils;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.*;
-import net.minecraft.util.ChatComponentText;
+import net.minecraft.client.gui.GuiButton;
+import net.minecraft.client.gui.GuiMultiplayer;
 import net.minecraft.util.Session;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import org.lwjgl.opengl.Display;
 
+import java.awt.*;
 import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.Field;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.Scanner;
+import java.text.ParseException;
 
-@Mod(modid = "mysessionmod", name = "MySessionMod", version = "1.0")
+@Mod(modid = MySessionMod.MODID, version = MySessionMod.VERSION)
 public class MySessionMod {
 
-    private final Minecraft mc = Minecraft.getMinecraft();
-    private Session originalSession;
+    public static final String MODID = "mysessionmod";
+    public static final String VERSION = "1.0";
+    public static Minecraft mc = Minecraft.getMinecraft();
+    public static Session originalSession = mc.getSession();
+    public static String onlineStatus = "§4╳ Offline";
+    public static String isSessionValid = "§2✔ Valid";
 
     @Mod.EventHandler
-    public void init(FMLInitializationEvent event) {
-        originalSession = mc.getSession(); // Save original session
+    public void preInit(FMLPreInitializationEvent event) {
         MinecraftForge.EVENT_BUS.register(this);
+        Display.setTitle("MySessionMod " + VERSION);
     }
 
     @SubscribeEvent
-    public void onGuiInit(GuiScreenEvent.InitGuiEvent.Post event) {
-        if (event.gui instanceof GuiMultiplayer) {
-            event.buttonList.add(new GuiButton(9001, event.gui.width - 110, 10, 100, 20, "Switch Account"));
-        }
-    }
-
-    @SubscribeEvent
-    public void onGuiAction(GuiScreenEvent.ActionPerformedEvent.Post event) {
-        if (event.gui instanceof GuiMultiplayer && event.button.id == 9001) {
-            mc.displayGuiScreen(new LoginScreen());
-        }
-    }
-
-    private class LoginScreen extends GuiScreen {
-        private GuiTextField ssidField;
-        private GuiButton loginButton;
-        private GuiButton restoreButton;
-
-        @Override
-        public void initGui() {
-            this.ssidField = new GuiTextField(0, fontRendererObj, width / 2 - 100, height / 2 - 10, 200, 20);
-            this.ssidField.setFocused(true);
-
-            this.loginButton = new GuiButton(1, width / 2 - 100, height / 2 + 15, "Login with SSID");
-            this.restoreButton = new GuiButton(2, width / 2 - 100, height / 2 + 40, "Restore Account");
-
-            this.buttonList.add(loginButton);
-            this.buttonList.add(restoreButton);
-        }
-
-        @Override
-        protected void actionPerformed(GuiButton button) {
-            if (button.id == 1) {
-                String ssid = ssidField.getText().trim();
-                if (!ssid.isEmpty()) {
-                    switchAccount(ssid);
-                } else {
-                    mc.ingameGUI.getChatGUI().printChatMessage(
-                        new ChatComponentText("§cSSID cannot be empty."));
-                }
-            } else if (button.id == 2) {
-                restoreOriginalSession();
-            }
-        }
-
-        @Override
-        protected void keyTyped(char typedChar, int keyCode) throws IOException {
-            this.ssidField.textboxKeyTyped(typedChar, keyCode);
-            super.keyTyped(typedChar, keyCode);
-        }
-
-        @Override
-        protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
-            super.mouseClicked(mouseX, mouseY, mouseButton);
-            this.ssidField.mouseClicked(mouseX, mouseY, mouseButton);
-        }
-
-        @Override
-        public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-            drawDefaultBackground();
-            drawCenteredString(fontRendererObj, "Enter SSID", width / 2, height / 2 - 30, 0xFFFFFF);
-            this.ssidField.drawTextBox();
-            super.drawScreen(mouseX, mouseY, partialTicks);
-        }
-
-        private void switchAccount(String ssid) {
+    public void onInitGuiPost(GuiScreenEvent.InitGuiEvent.Post e) throws IOException, ParseException {
+        if (e.gui instanceof GuiMultiplayer) {
+            e.buttonList.add(new GuiButton(2100, e.gui.width - 90, 5, 80, 20, "Login"));
+            e.buttonList.add(new GuiButton(2200,  e.gui.width - 180, 5, 80, 20, "Changer"));
             new Thread(() -> {
                 try {
-                    URL url = new URL("https://session.minecraft.net/session/minecraft/profile/by-ssid/" + ssid);
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("GET");
-
-                    InputStream is = conn.getInputStream();
-                    Scanner scanner = new Scanner(is).useDelimiter("\\A");
-                    String response = scanner.hasNext() ? scanner.next() : "";
-                    scanner.close();
-                    is.close();
-
-                    if (response.contains("\"id\"") && response.contains("\"name\"")) {
-                        String uuid = response.split("\"id\":\"")[1].split("\"")[0];
-                        String name = response.split("\"name\":\"")[1].split("\"")[0];
-
-                        Session session = new Session(name, uuid, ssid, "mojang");
-
-                        Field sessionField = Minecraft.class.getDeclaredField("session");
-                        sessionField.setAccessible(true);
-                        sessionField.set(mc, session);
-
-                        mc.addScheduledTask(() -> {
-                            mc.displayGuiScreen(new GuiMultiplayer(null));
-                            mc.ingameGUI.getChatGUI().printChatMessage(
-                                new ChatComponentText("§aSwitched to: " + name + " (" + uuid + ")"));
-                        });
-                    } else {
-                        mc.addScheduledTask(() -> {
-                            mc.displayGuiScreen(new GuiMultiplayer(null));
-                            mc.ingameGUI.getChatGUI().printChatMessage(
-                                new ChatComponentText("§cInvalid SSID: Unable to retrieve account information."));
-                        });
-                    }
-
-                } catch (Exception e) {
-                    mc.addScheduledTask(() -> {
-                        mc.displayGuiScreen(new GuiMultiplayer(null));
-                        mc.ingameGUI.getChatGUI().printChatMessage(
-                            new ChatComponentText("§cFailed to switch account: " + e.getClass().getSimpleName() + " - " + e.getMessage()));
-                    });
+                    isSessionValid = APIUtils.validateSession(mc.getSession().getToken()) ? "§2✔ Valid" : "§4╳ Invalid";
+                    onlineStatus = APIUtils.checkOnline(mc.getSession().getUsername()) ? "§2✔ Online" : "§4╳ Offline";
+                } catch (Exception ex) {
+                    ex.printStackTrace();
                 }
             }).start();
         }
+    }
 
-        private void restoreOriginalSession() {
-            if (originalSession != null) {
-                try {
-                    Field sessionField = Minecraft.class.getDeclaredField("session");
-                    sessionField.setAccessible(true);
-                    sessionField.set(mc, originalSession);
+    @SubscribeEvent
+    public void onDrawScreenPost(GuiScreenEvent.DrawScreenEvent.Post e) throws IOException, ParseException {
+        if (e.gui instanceof GuiMultiplayer) {
+            Minecraft.getMinecraft().fontRendererObj.drawString("§fUser: " +  mc.getSession().getUsername() + "  §f|  " + onlineStatus + "  §f|  " + isSessionValid, 5, 10, Color.RED.getRGB());
+        }
+    }
 
-                    mc.displayGuiScreen(new GuiMultiplayer(null));
-                    mc.ingameGUI.getChatGUI().printChatMessage(
-                        new ChatComponentText("§eRestored original account: " + originalSession.getUsername()));
-
-                } catch (Exception e) {
-                    mc.ingameGUI.getChatGUI().printChatMessage(
-                        new ChatComponentText("§cFailed to restore account: " + e.getMessage()));
-                }
-            } else {
-                mc.ingameGUI.getChatGUI().printChatMessage(
-                    new ChatComponentText("§cNo original session to restore."));
+    @SubscribeEvent
+    public void onActionPerformedPre(GuiScreenEvent.ActionPerformedEvent.Pre e) {
+        if (e.gui instanceof GuiMultiplayer) {
+            if (e.button.id == 2100) {
+                Minecraft.getMinecraft().displayGuiScreen(new SessionGUI(e.gui));
+            }
+            if (e.button.id == 2200) {
+                Minecraft.getMinecraft().displayGuiScreen(new ChangerGUI(e.gui));
             }
         }
     }
-}
+} 
