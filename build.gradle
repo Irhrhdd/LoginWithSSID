@@ -1,23 +1,25 @@
 buildscript {
     repositories {
         maven { url "https://maven.minecraftforge.net" }
-        mavenCentral() // <-- add this so Gradle can find the shadow plugin
+        mavenCentral()
+        gradlePluginPortal()
     }
     dependencies {
         classpath "net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT"
-        classpath "gradle.plugin.com.github.jengelman.gradle.plugins:shadow:2.0.4"  // add this line
+        classpath "gradle.plugin.com.github.jengelman.gradle.plugins:shadow-gradle-plugin:7.1.2"
     }
 }
 
 apply plugin: 'java'
-apply plugin: 'com.github.johnrengelman.shadow'  // now it will find this plugin
 apply plugin: 'net.minecraftforge.gradle.forge'
+apply plugin: 'com.github.johnrengelman.shadow'
 
-version = "1.0"
+version = "2.0"
 group = "com.example.mysessionmod"
 archivesBaseName = "MySessionMod"
 
-sourceCompatibility = targetCompatibility = 1.8
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 compileJava.options.encoding = "UTF-8"
 
 minecraft {
@@ -27,16 +29,18 @@ minecraft {
     makeObfSourceJar = false
 }
 
-configurations {
-    shade
-    compile.extendsFrom(shade)
-}
-
 repositories {
     mavenCentral()
+    maven { url "https://libraries.minecraft.net/" }
 }
 
 dependencies {
+    // Add your dependencies here if needed
+}
+
+configurations {
+    shade
+    compile.extendsFrom(shade)
 }
 
 processResources {
@@ -47,7 +51,6 @@ processResources {
         include "mcmod.info"
         expand "version": project.version, "mcversion": project.minecraft.version
     }
-
     from(sourceSets.main.resources.srcDirs) {
         exclude "mcmod.info"
     }
