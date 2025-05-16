@@ -11,8 +11,8 @@ buildscript {
 apply plugin: 'net.minecraftforge.gradle.forge'
 
 version = "1.0"
-group = "com.example.ssidmod"
-archivesBaseName = "SSIDAccountSwitcher"
+group = "com.example.MySessionMod"
+archivesBaseName = "MySessionMod"
 
 sourceCompatibility = targetCompatibility = "1.8"
 
