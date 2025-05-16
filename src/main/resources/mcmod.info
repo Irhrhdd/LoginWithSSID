@@ -1,13 +1,11 @@
 [{
-  "modid": "ssidmod",
-  "name": "SSID Account Switcher",
-  "description": "Switch accounts using SSID from the main menu.",
-  "version": "${version}",
-  "mcversion": "${mcversion}",
+  "modid": "mysessionmod",
+  "name": "My Session Mod",
+  "description": "A mod to print your own session info.",
+  "version": "1.0",
+  "mcversion": "1.8.9",
   "authorList": ["You"],
-  "credits": "Made with ChatGPT",
-  "logoFile": "",
-  "url": "",
-  "updateUrl": "",
-  "screenshots": []
+  "credits": "",
+  "clientSideOnly": true,
+  "serverSideOnly": false
 }]
