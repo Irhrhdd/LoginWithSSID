@@ -60,7 +60,8 @@ public class MySessionMod {
                 if (!ssid.isEmpty()) {
                     switchAccount(ssid);
                 } else {
-                    mc.thePlayer.addChatMessage(new ChatComponentText("§cSSID cannot be empty."));
+                    mc.ingameGUI.getChatGUI().printChatMessage(
+                        new ChatComponentText("§cSSID cannot be empty."));
                 }
             }
         }
@@ -91,40 +92,40 @@ public class MySessionMod {
                     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                     conn.setRequestMethod("GET");
 
-                    InputStream is = conn.getInputStream();
-                    Scanner scanner = new Scanner(is).useDelimiter("\\A");
-                    String response = scanner.hasNext() ? scanner.next() : "";
-                    scanner.close();
-                    is.close();
+                    try (InputStream is = conn.getInputStream();
+                         Scanner scanner = new Scanner(is).useDelimiter("\\A")) {
 
-                    if (response.contains("\"id\"") && response.contains("\"name\"")) {
-                        String uuid = response.split("\"id\":\"")[1].split("\"")[0];
-                        String name = response.split("\"name\":\"")[1].split("\"")[0];
+                        String response = scanner.hasNext() ? scanner.next() : "";
 
-                        Session session = new Session(name, uuid, ssid, "mojang");
+                        if (response.contains("\"id\"") && response.contains("\"name\"")) {
+                            String uuid = response.split("\"id\":\"")[1].split("\"")[0];
+                            String name = response.split("\"name\":\"")[1].split("\"")[0];
 
-                        Field sessionField = Minecraft.class.getDeclaredField("session");
-                        sessionField.setAccessible(true);
-                        sessionField.set(mc, session);
+                            Session session = new Session(name, uuid, ssid, "mojang");
 
-                        mc.addScheduledTask(() -> {
-                            mc.displayGuiScreen(new GuiMultiplayer(null));
-                            IChatComponent msg = new ChatComponentText("§aSwitched to: " + name + " (" + uuid + ")");
-                            mc.ingameGUI.getChatGUI().printChatMessage(msg);
-                        });
-                    } else {
-                        mc.addScheduledTask(() -> {
-                            mc.displayGuiScreen(new GuiMultiplayer(null));
-                            IChatComponent msg = new ChatComponentText("§cInvalid SSID: Unable to retrieve account information.");
-                            mc.ingameGUI.getChatGUI().printChatMessage(msg);
-                        });
+                            Field sessionField = Minecraft.class.getDeclaredField("session");
+                            sessionField.setAccessible(true);
+                            sessionField.set(mc, session);
+
+                            mc.addScheduledTask(() -> {
+                                mc.displayGuiScreen(new GuiMultiplayer(null));
+                                mc.ingameGUI.getChatGUI().printChatMessage(
+                                    new ChatComponentText("§aSwitched to: " + name + " (" + uuid + ")"));
+                            });
+                        } else {
+                            mc.addScheduledTask(() -> {
+                                mc.displayGuiScreen(new GuiMultiplayer(null));
+                                mc.ingameGUI.getChatGUI().printChatMessage(
+                                    new ChatComponentText("§cInvalid SSID: Unable to retrieve account information."));
+                            });
+                        }
                     }
 
                 } catch (Exception e) {
                     mc.addScheduledTask(() -> {
                         mc.displayGuiScreen(new GuiMultiplayer(null));
-                        IChatComponent msg = new ChatComponentText("§cFailed to switch account: " + e.getClass().getSimpleName() + " - " + e.getMessage());
-                        mc.ingameGUI.getChatGUI().printChatMessage(msg);
+                        mc.ingameGUI.getChatGUI().printChatMessage(
+                            new ChatComponentText("§cFailed to switch account: " + e.getClass().getSimpleName() + " - " + e.getMessage()));
                     });
                 }
             }).start();
