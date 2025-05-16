@@ -3,7 +3,6 @@ package com.example.mysessionmod;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.*;
 import net.minecraft.util.ChatComponentText;
-import net.minecraft.util.IChatComponent;
 import net.minecraft.util.Session;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
@@ -11,6 +10,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
@@ -21,9 +21,11 @@ import java.util.Scanner;
 public class MySessionMod {
 
     private final Minecraft mc = Minecraft.getMinecraft();
+    private Session originalSession;
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
+        originalSession = mc.getSession(); // Save original session
         MinecraftForge.EVENT_BUS.register(this);
     }
 
@@ -44,13 +46,18 @@ public class MySessionMod {
     private class LoginScreen extends GuiScreen {
         private GuiTextField ssidField;
         private GuiButton loginButton;
+        private GuiButton restoreButton;
 
         @Override
         public void initGui() {
             this.ssidField = new GuiTextField(0, fontRendererObj, width / 2 - 100, height / 2 - 10, 200, 20);
             this.ssidField.setFocused(true);
+
             this.loginButton = new GuiButton(1, width / 2 - 100, height / 2 + 15, "Login with SSID");
+            this.restoreButton = new GuiButton(2, width / 2 - 100, height / 2 + 40, "Restore Account");
+
             this.buttonList.add(loginButton);
+            this.buttonList.add(restoreButton);
         }
 
         @Override
@@ -63,16 +70,19 @@ public class MySessionMod {
                     mc.ingameGUI.getChatGUI().printChatMessage(
                         new ChatComponentText("§cSSID cannot be empty."));
                 }
+            } else if (button.id == 2) {
+                restoreOriginalSession();
             }
         }
 
         @Override
-        protected void keyTyped(char typedChar, int keyCode) {
+        protected void keyTyped(char typedChar, int keyCode) throws IOException {
             this.ssidField.textboxKeyTyped(typedChar, keyCode);
+            super.keyTyped(typedChar, keyCode);
         }
 
         @Override
-        protected void mouseClicked(int mouseX, int mouseY, int mouseButton) {
+        protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
             super.mouseClicked(mouseX, mouseY, mouseButton);
             this.ssidField.mouseClicked(mouseX, mouseY, mouseButton);
         }
@@ -129,6 +139,27 @@ public class MySessionMod {
                     });
                 }
             }).start();
+        }
+
+        private void restoreOriginalSession() {
+            if (originalSession != null) {
+                try {
+                    Field sessionField = Minecraft.class.getDeclaredField("session");
+                    sessionField.setAccessible(true);
+                    sessionField.set(mc, originalSession);
+
+                    mc.displayGuiScreen(new GuiMultiplayer(null));
+                    mc.ingameGUI.getChatGUI().printChatMessage(
+                        new ChatComponentText("§eRestored original account: " + originalSession.getUsername()));
+
+                } catch (Exception e) {
+                    mc.ingameGUI.getChatGUI().printChatMessage(
+                        new ChatComponentText("§cFailed to restore account: " + e.getMessage()));
+                }
+            } else {
+                mc.ingameGUI.getChatGUI().printChatMessage(
+                    new ChatComponentText("§cNo original session to restore."));
+            }
         }
     }
 }
