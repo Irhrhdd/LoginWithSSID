@@ -2,7 +2,6 @@ package com.example.bedwarsstatstab;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.minecraft.client.Minecraft;
 
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -10,32 +9,56 @@ import java.net.URL;
 import java.util.UUID;
 
 public class HypixelAPI {
-    private static String apiKey = "";
+    private static String apiKey = null;
 
     public static void setApiKey(String key) {
         apiKey = key;
     }
 
     public static String getFormattedStats(UUID uuid) {
+        if (apiKey == null || apiKey.isEmpty()) {
+            return "[⭐ ?] (FKDR: ?)";
+        }
+
         try {
-            URL url = new URL("https://api.hypixel.net/player?key=" + apiKey + "&uuid=" + uuid.toString());
+            URL url = new URL("https://api.hypixel.net/player?key=" + apiKey + "&uuid=" + uuid.toString().replace("-", ""));
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(3000);
+            conn.setReadTimeout(3000);
             conn.setRequestMethod("GET");
 
-            JsonParser parser = new JsonParser();
-            JsonObject json = parser.parse(new InputStreamReader(conn.getInputStream())).getAsJsonObject();
+            JsonObject json = JsonParser.parseReader(new InputStreamReader(conn.getInputStream())).getAsJsonObject();
 
-            if (!json.get("success").getAsBoolean()) return "[\u2B50 ?]";
+            if (!json.get("success").getAsBoolean()) {
+                return "[⭐ ?] (FKDR: ?)";
+            }
 
             JsonObject player = json.getAsJsonObject("player");
-            JsonObject stats = player.getAsJsonObject("stats").getAsJsonObject("Bedwars");
-            int star = stats.has("Experience") ? stats.get("Experience").getAsInt() / 500 : 0;
-            int fk = stats.has("final_kills_bedwars") ? stats.get("final_kills_bedwars").getAsInt() : 0;
-            int fd = stats.has("final_deaths_bedwars") ? stats.get("final_deaths_bedwars").getAsInt() : 1;
-            double fkdr = fd == 0 ? fk : (double) fk / fd;
-            return "[\u2B50 " + star + "] (FKDR: " + String.format("%.2f", fkdr) + ")";
+            if (player == null || !player.has("stats")) {
+                return "[⭐ 0] (FKDR: 0.00)";
+            }
+
+            JsonObject bedwars = player
+                    .getAsJsonObject("stats")
+                    .getAsJsonObject("Bedwars");
+
+            int star = bedwars.has("Experience") ? getStarFromExp(bedwars.get("Experience").getAsDouble()) : 0;
+            int wins = bedwars.has("wins_bedwars") ? bedwars.get("wins_bedwars").getAsInt() : 0;
+            int losses = bedwars.has("losses_bedwars") ? bedwars.get("losses_bedwars").getAsInt() : 0;
+            double fkdr = calculateFKDR(bedwars);
+
+            return String.format("[⭐ %d] (FKDR: %.2f)", star, fkdr);
         } catch (Exception e) {
-            return "[\u2B50 ?]";
+            return "[⭐ ?] (FKDR: ?)";
         }
     }
-}
+
+    private static int getStarFromExp(double exp) {
+        return (int) Math.floor(exp / 5000); // simple linear estimate
+    }
+
+    private static double calculateFKDR(JsonObject bw) {
+        int fk = bw.has("final_kills_bedwars") ? bw.get("final_kills_bedwars").getAsInt() : 0;
+        int fd = bw.has("final_deaths_bedwars") ? bw.get("final_deaths_bedwars").getAsInt() : 1;
+        return fd == 0 ? fk : (double) fk / fd;
+    }
