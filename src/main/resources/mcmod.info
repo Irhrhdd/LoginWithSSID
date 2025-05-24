@@ -1,14 +1,15 @@
+
 [
   {
-    "modid": "mysessionmod",
-    "name": "My Session Mod",
-    "description": "A mod that allows switching sessions with SSID and restoring them.",
-    "version": "${version}",
-    "mcversion": "${mcversion}",
-    "authorList": ["YourName"],
-    "credits": "",
-    "logoFile": "",
+    "modid": "bedwarsstatstab",
+    "name": "BedWars Stats Tab",
+    "description": "Displays BedWars star and FKDR in the tab list on Hypixel",
+    "version": "1.0",
+    "mcversion": "1.8.9",
+    "authorList": ["ChatGPT"],
+    "url": "",
+    "updateUrl": "",
     "screenshots": [],
-    "dependencies": []
+    "logoFile": ""
   }
 ]
