@@ -1,44 +1,48 @@
 package com.example.bedwarsstatstab;
 
+import com.mojang.realmsclient.gui.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiPlayerTabOverlay;
+import net.minecraft.client.gui.GuiIngame;
 import net.minecraft.client.network.NetworkPlayerInfo;
-import net.minecraft.scoreboard.ScorePlayerTeam;
-import net.minecraft.util.ChatComponentText;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
-import java.util.UUID;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class TabOverlayHook {
-    private Minecraft mc = Minecraft.getMinecraft();
-    private long lastUpdateTime = 0;
+    private final Minecraft mc = Minecraft.getMinecraft();
 
     @SubscribeEvent
-    public void onRenderGameOverlay(RenderGameOverlayEvent.Pre event) {
-        if (event.type != RenderGameOverlayEvent.ElementType.PLAYER_LIST) return;
-        if (mc.thePlayer == null || mc.theWorld == null) return;
+    public void onRender(RenderGameOverlayEvent.Text event) {
+        if (mc.theWorld == null || mc.thePlayer == null) return;
+        if (!mc.gameSettings.keyBindPlayerList.isKeyDown()) return;
 
-        long now = System.currentTimeMillis();
-        if (now - lastUpdateTime > 30000) { // 30 seconds cooldown
-            lastUpdateTime = now;
+        List<NetworkPlayerInfo> players = mc.getNetHandler().getPlayerInfoMap().stream()
+            .sorted(Comparator.comparing(info -> info.getGameProfile().getName()))
+            .collect(Collectors.toList());
 
-            for (NetworkPlayerInfo info : mc.getNetHandler().getPlayerInfoMap()) {
-                UUID uuid = info.getGameProfile().getId();
-                HypixelAPI.fetchAndCachePlayerStats(uuid);
+        GuiIngame guiIngame = mc.ingameGUI;
+        GuiPlayerTabOverlay tab = new GuiPlayerTabOverlay(mc, guiIngame);
+
+        int y = 10;
+        for (NetworkPlayerInfo info : players) {
+            String name = tab.getPlayerName(info);
+            BedWarsStats stats = HypixelAPI.getCachedStats(info.getGameProfile().getId());
+
+            String line;
+            if (stats != null) {
+                line = ChatFormatting.YELLOW + "[⭐ " + stats.star + "] " +
+                       ChatFormatting.RESET + name +
+                       ChatFormatting.GRAY + " (FKDR: " + stats.fkdr + ")";
+            } else {
+                line = name;
             }
-        }
 
-        for (NetworkPlayerInfo info : mc.getNetHandler().getPlayerInfoMap()) {
-            UUID uuid = info.getGameProfile().getId();
-            String name = info.getGameProfile().getName();
-
-            String stats = StatsCache.get(uuid);
-
-            String fullName = stats.isEmpty() ? name : stats + " " + name;
-
-            ScorePlayerTeam team = info.getPlayerTeam();
-            ChatComponentText chatName = new ChatComponentText(team != null ? team.formatString(fullName) : fullName);
-            info.setDisplayName(chatName);
+            mc.fontRendererObj.drawStringWithShadow(line, 10, y, 0xFFFFFF);
+            y += 10;
         }
     }
 }
