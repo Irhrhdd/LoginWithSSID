@@ -4,24 +4,29 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiIngame;
 import net.minecraft.client.gui.GuiPlayerTabOverlay;
 import net.minecraft.client.network.NetworkPlayerInfo;
-import net.minecraft.util.ChatComponentText;
+
+import java.util.UUID;
 
 public class CustomTabOverlay extends GuiPlayerTabOverlay {
 
-    public CustomTabOverlay(Minecraft mc, GuiIngame guiIngame) {
-        super(mc, guiIngame);
+    private final Minecraft mc;
+
+    public CustomTabOverlay(Minecraft mcIn, GuiIngame guiIngame) {
+        super(mcIn, guiIngame);
+        this.mc = mcIn;
     }
 
     @Override
     public String getPlayerName(NetworkPlayerInfo info) {
-        BedWarsStats stats = HypixelAPI.getCachedStats(info.getGameProfile().getId());
+        UUID uuid = info.getGameProfile().getId();
+        BedWarsStats stats = HypixelAPI.getCachedStats(uuid);
+
         String name = info.getGameProfile().getName();
 
         if (stats != null) {
-            return String.format("\u00a76[\u2b50 %d] \u00a7f%s \u00a77(FKDR: %.2f)", stats.getStars(), name, stats.getFkdr());
+            return String.format("§6[⭐ %d] §f%s §7(FKDR: %.2f)", stats.getStars(), name, stats.getFkdr());
         } else {
-            HypixelAPI.fetchStatsAsync(info.getGameProfile().getId());
             return name;
         }
     }
-} 
+}
