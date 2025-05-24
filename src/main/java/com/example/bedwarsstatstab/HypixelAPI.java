@@ -2,68 +2,60 @@ package com.example.bedwarsstatstab;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class HypixelAPI {
-    private static final ExecutorService executor = Executors.newFixedThreadPool(2);
-    private static String apiKey = "";
+    private static String apiKey;
+    private static final Map<UUID, BedWarsStats> cache = new HashMap<>();
 
     public static void setApiKey(String key) {
         apiKey = key;
     }
 
-    public static void fetchAndCachePlayerStats(UUID uuid) {
-        if (apiKey == null || apiKey.isEmpty()) return;
+    public static BedWarsStats getCachedStats(UUID uuid) {
+        if (cache.containsKey(uuid)) {
+            return cache.get(uuid);
+        }
 
-        executor.submit(() -> {
-            try {
-                String uuidStr = uuid.toString().replace("-", "");
-                // Build URL for Hypixel API player stats
-                URL url = new URL("https://api.hypixel.net/player?key=" + apiKey + "&uuid=" + uuidStr);
+        BedWarsStats stats = fetchStatsFromHypixel(uuid);
+        if (stats != null) {
+            cache.put(uuid, stats);
+        }
 
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("GET");
-                conn.setConnectTimeout(5000);
-                conn.setReadTimeout(5000);
+        return stats;
+    }
 
-                InputStreamReader reader = new InputStreamReader(conn.getInputStream());
-                JsonObject json = new JsonParser().parse(reader).getAsJsonObject();
-                reader.close();
+    private static BedWarsStats fetchStatsFromHypixel(UUID uuid) {
+        if (apiKey == null || apiKey.isEmpty()) {
+            return null;
+        }
 
-                if (json.has("success") && json.get("success").getAsBoolean()) {
-                    JsonObject player = json.getAsJsonObject("player");
-                    if (player != null) {
-                        JsonObject stats = player.getAsJsonObject("stats");
-                        if (stats != null) {
-                            JsonObject bedwars = stats.getAsJsonObject("Bedwars");
-                            if (bedwars != null) {
-                                int stars = bedwars.has("stars") ? bedwars.get("stars").getAsInt() : 0;
-                                double fkdr = 0.0;
-                                int finalKills = bedwars.has("final_kills_bedwars") ? bedwars.get("final_kills_bedwars").getAsInt() : 0;
-                                int finalDeaths = bedwars.has("final_deaths_bedwars") ? bedwars.get("final_deaths_bedwars").getAsInt() : 0;
-                                if (finalDeaths != 0) {
-                                    fkdr = (double) finalKills / finalDeaths;
-                                }
+        try {
+            URL url = new URL("https://api.hypixel.net/player?uuid=" + uuid + "&key=" + apiKey);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
 
-                                String formattedStats = "[⭐ " + stars + "] (FKDR: " + String.format("%.2f", fkdr) + ")";
-                                StatsCache.put(uuid, formattedStats);
-                                return;
-                            }
-                        }
-                    }
-                }
-                // If anything missing, clear cache for that uuid
-                StatsCache.put(uuid, "");
-            } catch (Exception e) {
-                // On error clear cache for that player
-                StatsCache.put(uuid, "");
-                e.printStackTrace();
-            }
-        });
+            JsonObject json = JsonParser.parseReader(new InputStreamReader(conn.getInputStream())).getAsJsonObject();
+            if (!json.has("player") || json.get("player").isJsonNull()) return null;
+
+            JsonObject player = json.getAsJsonObject("player");
+            JsonObject stats = player.getAsJsonObject("stats").getAsJsonObject("Bedwars");
+
+            int star = stats.has("Experience") ? (int) (stats.get("Experience").getAsDouble() / 5000) : 0;
+            int finalKills = stats.has("final_kills_bedwars") ? stats.get("final_kills_bedwars").getAsInt() : 0;
+            int finalDeaths = stats.has("final_deaths_bedwars") ? stats.get("final_deaths_bedwars").getAsInt() : 1;
+
+            double fkdr = finalDeaths == 0 ? finalKills : (double) finalKills / finalDeaths;
+            return new BedWarsStats(star, fkdr);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
