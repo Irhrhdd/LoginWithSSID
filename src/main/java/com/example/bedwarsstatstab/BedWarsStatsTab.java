@@ -1,5 +1,6 @@
 package com.example.bedwarsstatstab;
 
+import net.minecraft.client.Minecraft;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
@@ -12,7 +13,9 @@ public class BedWarsStatsTab {
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
+        Minecraft mc = Minecraft.getMinecraft();
+        mc.ingameGUI.tabList = new CustomTabOverlay(mc, mc.ingameGUI);
         MinecraftForge.EVENT_BUS.register(new TabOverlayHook());
-        CommandSetApiKey.register(); // register client-side command
+        CommandSetApiKey.register();
     }
 }
