@@ -2,6 +2,7 @@ package com.example.bedwarsstatstab;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.minecraft.client.Minecraft;
 
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -11,7 +12,8 @@ import java.util.Map;
 import java.util.UUID;
 
 public class HypixelAPI {
-    private static String apiKey;
+
+    private static String apiKey = "";
     private static final Map<UUID, BedWarsStats> cache = new HashMap<>();
 
     public static void setApiKey(String key) {
@@ -19,43 +21,42 @@ public class HypixelAPI {
     }
 
     public static BedWarsStats getCachedStats(UUID uuid) {
-        if (cache.containsKey(uuid)) {
-            return cache.get(uuid);
-        }
-
-        BedWarsStats stats = fetchStatsFromHypixel(uuid);
-        if (stats != null) {
-            cache.put(uuid, stats);
-        }
-
-        return stats;
+        return cache.get(uuid);
     }
 
-    private static BedWarsStats fetchStatsFromHypixel(UUID uuid) {
-        if (apiKey == null || apiKey.isEmpty()) {
-            return null;
-        }
+    public static void fetchStatsAsync(UUID uuid) {
+        // If already cached, skip
+        if (cache.containsKey(uuid)) return;
 
-        try {
-            URL url = new URL("https://api.hypixel.net/player?uuid=" + uuid + "&key=" + apiKey);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
+        new Thread(() -> {
+            try {
+                URL url = new URL("https://api.hypixel.net/player?key=" + apiKey + "&uuid=" + uuid.toString().replace("-", ""));
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
 
-            JsonObject json = JsonParser.parseReader(new InputStreamReader(conn.getInputStream())).getAsJsonObject();
-            if (!json.has("player") || json.get("player").isJsonNull()) return null;
+                InputStreamReader reader = new InputStreamReader(conn.getInputStream());
+                JsonParser parser = new JsonParser(); // Compatible with GSON 2.2.4
+                JsonObject json = parser.parse(reader).getAsJsonObject();
+                reader.close();
 
-            JsonObject player = json.getAsJsonObject("player");
-            JsonObject stats = player.getAsJsonObject("stats").getAsJsonObject("Bedwars");
+                JsonObject player = json.getAsJsonObject("player");
+                if (player != null && player.has("stats")) {
+                    JsonObject stats = player.getAsJsonObject("stats").getAsJsonObject("Bedwars");
 
-            int star = stats.has("Experience") ? (int) (stats.get("Experience").getAsDouble() / 5000) : 0;
-            int finalKills = stats.has("final_kills_bedwars") ? stats.get("final_kills_bedwars").getAsInt() : 0;
-            int finalDeaths = stats.has("final_deaths_bedwars") ? stats.get("final_deaths_bedwars").getAsInt() : 1;
+                    int star = player.has("achievements") ? player.getAsJsonObject("achievements").get("bedwars_level").getAsInt() : 0;
+                    int fk = stats.has("final_kills_bedwars") ? stats.get("final_kills_bedwars").getAsInt() : 0;
+                    int fd = stats.has("final_deaths_bedwars") ? stats.get("final_deaths_bedwars").getAsInt() : 1;
+                    double fkdr = fd == 0 ? fk : (double) fk / fd;
 
-            double fkdr = finalDeaths == 0 ? finalKills : (double) finalKills / finalDeaths;
-            return new BedWarsStats(star, fkdr);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+                    BedWarsStats bedWarsStats = new BedWarsStats(star, fkdr);
+                    cache.put(uuid, bedWarsStats);
+                }
+            } catch (Exception e) {
+                Minecraft.getMinecraft().thePlayer.addChatMessage(
+                        new net.minecraft.util.ChatComponentText("§c[BedWarsStatsTab] Failed to fetch stats for UUID: " + uuid));
+            }
+        }).start();
     }
 }
