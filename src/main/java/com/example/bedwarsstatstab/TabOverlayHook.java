@@ -7,6 +7,7 @@ import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
+import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.UUID;
 
@@ -23,6 +24,9 @@ public class TabOverlayHook {
         if (!mc.gameSettings.keyBindPlayerList.isKeyDown()) return;
         if (mc.theWorld == null || mc.thePlayer == null) return;
 
+        // Debug message to confirm event fires
+        mc.thePlayer.addChatMessage(new ChatComponentText("§a[BedWarsStatsTab] Updating tab overlay"));
+
         Collection<NetworkPlayerInfo> players = mc.getNetHandler().getPlayerInfoMap();
 
         for (NetworkPlayerInfo info : players) {
@@ -37,8 +41,13 @@ public class TabOverlayHook {
             String name = info.getGameProfile().getName();
             String formatted = String.format("§6[⭐ %d] §f%s §7(FKDR: %.2f)", stats.getStars(), name, stats.getFkdr());
 
-            // Use the setter method instead of direct field access
-            info.setDisplayName(new ChatComponentText(formatted));
+            try {
+                Field displayNameField = NetworkPlayerInfo.class.getDeclaredField("displayName");
+                displayNameField.setAccessible(true);
+                displayNameField.set(info, new ChatComponentText(formatted));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 }
