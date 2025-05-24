@@ -1,7 +1,6 @@
 package com.example.bedwarsstatstab;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiPlayerTabOverlay;
 import net.minecraft.client.network.NetworkPlayerInfo;
 import net.minecraft.scoreboard.ScorePlayerTeam;
 import net.minecraft.util.ChatComponentText;
@@ -19,7 +18,7 @@ public class TabOverlayHook {
         if (event.type != RenderGameOverlayEvent.ElementType.PLAYER_LIST) return;
         if (mc.thePlayer == null || mc.theWorld == null) return;
 
-        Collection<NetworkPlayerInfo> players = mc.ingameGUI.getTabList();
+        Collection<NetworkPlayerInfo> players = mc.getNetHandler().getPlayerInfoMap();
 
         for (NetworkPlayerInfo info : players) {
             UUID uuid = info.getGameProfile().getId();
