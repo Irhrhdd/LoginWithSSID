@@ -13,9 +13,9 @@ buildscript {
 
 apply plugin: 'net.minecraftforge.gradle.forge'
 
-version = project.mod_version
-group = "com.example.${mod_id}"
-archivesBaseName = mod_name.replaceAll(' ', '')
+version = findProperty("mod_version") ?: "1.0"
+group = "com.example." + (findProperty("mod_id") ?: "bedwarsstatstab")
+archivesBaseName = (findProperty("mod_name") ?: "BedWarsStatsTab").replaceAll(" ", "")
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
