@@ -3,17 +3,21 @@ package com.example.bedwarsstatstab;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.ChatComponentText;
 
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 
 public class HypixelAPI {
-    private static String apiKey = "";
-    private static final Map<UUID, BedWarsStats> cache = new ConcurrentHashMap<>();
+    private static final String BASE_URL = "https://api.hypixel.net/player?key=";
+    private static String apiKey = null;
+    private static final ConcurrentHashMap<UUID, BedWarsStats> cache = new ConcurrentHashMap<>();
+    private static final ExecutorService executor = Executors.newCachedThreadPool();
 
     public static void setApiKey(String key) {
         apiKey = key;
@@ -24,30 +28,51 @@ public class HypixelAPI {
     }
 
     public static void fetchStatsAsync(UUID uuid) {
-        new Thread(() -> {
+        if (apiKey == null || apiKey.isEmpty()) return;
+
+        executor.submit(() -> {
             try {
-                URL url = new URL("https://api.hypixel.net/player?key=" + apiKey + "&uuid=" + uuid.toString());
+                URL url = new URL(BASE_URL + apiKey + "&uuid=" + uuid.toString());
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
+                conn.connect();
 
-                JsonObject json = JsonParser.parseReader(new InputStreamReader(conn.getInputStream())).getAsJsonObject();
-
-                if (json.get("success").getAsBoolean()) {
-                    JsonObject player = json.getAsJsonObject("player");
-                    if (player != null && player.has("stats")) {
-                        JsonObject stats = player.getAsJsonObject("stats").getAsJsonObject("Bedwars");
-
-                        int stars = stats.has("Experience") ? stats.get("Experience").getAsInt() / 500 : 0;
-                        int finalKills = stats.has("final_kills_bedwars") ? stats.get("final_kills_bedwars").getAsInt() : 0;
-                        int finalDeaths = stats.has("final_deaths_bedwars") ? stats.get("final_deaths_bedwars").getAsInt() : 1;
-                        double fkdr = finalKills / (double) finalDeaths;
-
-                        cache.put(uuid, new BedWarsStats(stars, fkdr));
-                    }
+                if (conn.getResponseCode() != 200) {
+                    Minecraft.getMinecraft().thePlayer.addChatMessage(new ChatComponentText("§c[BedWarsStatsTab] Failed to fetch stats (HTTP " + conn.getResponseCode() + ")"));
+                    return;
                 }
+
+                JsonParser parser = new JsonParser();
+                JsonObject json = parser.parse(new InputStreamReader(conn.getInputStream())).getAsJsonObject();
+
+                boolean success = json.get("success").getAsBoolean();
+                if (!success) {
+                    Minecraft.getMinecraft().thePlayer.addChatMessage(new ChatComponentText("§c[BedWarsStatsTab] API request failed"));
+                    return;
+                }
+
+                JsonObject player = json.getAsJsonObject("player");
+                if (player == null) return;
+
+                JsonObject statsObj = player.getAsJsonObject("stats");
+                if (statsObj == null) return;
+
+                JsonObject bedwars = statsObj.getAsJsonObject("Bedwars");
+                if (bedwars == null) return;
+
+                int stars = bedwars.has("bedwars_level") ? bedwars.get("bedwars_level").getAsInt() : 0;
+
+                int kills = bedwars.has("kills_bedwars") ? bedwars.get("kills_bedwars").getAsInt() : 0;
+                int deaths = bedwars.has("deaths_bedwars") ? bedwars.get("deaths_bedwars").getAsInt() : 0;
+                double fkdr = deaths == 0 ? kills : ((double) kills / deaths);
+
+                BedWarsStats stats = new BedWarsStats(stars, fkdr);
+                cache.put(uuid, stats);
+
             } catch (Exception e) {
-                Minecraft.getMinecraft().thePlayer.addChatMessage(new ChatComponentText("§c[BedWarsStatsTab] Failed to fetch stats"));
+                Minecraft.getMinecraft().thePlayer.addChatMessage(new ChatComponentText("§c[BedWarsStatsTab] Exception while fetching stats"));
+                e.printStackTrace();
             }
-        }).start();
+        });
     }
 }
