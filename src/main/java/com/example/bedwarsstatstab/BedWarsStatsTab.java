@@ -3,7 +3,6 @@ package com.example.bedwarsstatstab;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiIngame;
 import net.minecraft.client.gui.GuiPlayerTabOverlay;
-import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 
@@ -17,18 +16,20 @@ public class BedWarsStatsTab {
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
-        replaceTabOverlay(Minecraft.getMinecraft());
-        MinecraftForge.EVENT_BUS.register(new TabOverlayHook());
-        CommandSetApiKey.register();
-    }
+        Minecraft mc = Minecraft.getMinecraft();
+        GuiIngame ingameGUI = mc.ingameGUI;
 
-    private void replaceTabOverlay(Minecraft mc) {
         try {
-            Field tabField = GuiIngame.class.getDeclaredField("field_175196_v"); // tab list field (obfuscated)
-            tabField.setAccessible(true);
-            tabField.set(mc.ingameGUI, new CustomTabOverlay(mc, mc.ingameGUI));
+            Field tabListField = GuiIngame.class.getDeclaredField("field_175196_v"); // obfuscated name for tabList
+            tabListField.setAccessible(true);
+            tabListField.set(ingameGUI, new CustomTabOverlay(mc, ingameGUI));
+            System.out.println("[BedWarsStatsTab] Successfully injected custom tab overlay.");
         } catch (Exception e) {
+            System.err.println("[BedWarsStatsTab] Failed to inject custom tab overlay.");
             e.printStackTrace();
         }
+
+        // Register the /bwstats command
+        CommandSetApiKey.register();
     }
 }
