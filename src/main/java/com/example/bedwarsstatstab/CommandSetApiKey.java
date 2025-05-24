@@ -1,6 +1,5 @@
 package com.example.bedwarsstatstab;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandSender;
@@ -22,11 +21,8 @@ public class CommandSetApiKey extends CommandBase {
     @Override
     public void processCommand(ICommandSender sender, String[] args) {
         if (args.length == 2 && args[0].equalsIgnoreCase("setkey")) {
-            String key = args[1];
-            HypixelAPI.setApiKey(key);
-            if (sender instanceof EntityPlayerSP) {
-                ((EntityPlayerSP) sender).addChatMessage(new ChatComponentText("§a[BedWarsStatsTab] API key set!"));
-            }
+            HypixelAPI.setApiKey(args[1]);
+            sender.addChatMessage(new ChatComponentText("§a[BedWarsStatsTab] API key set!"));
         } else {
             sender.addChatMessage(new ChatComponentText("§cUsage: /bwstats setkey <api-key>"));
         }
