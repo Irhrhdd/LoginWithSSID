@@ -13,7 +13,7 @@ public class CustomTabOverlay extends GuiPlayerTabOverlay {
     }
 
     @Override
-    protected String getPlayerName(NetworkPlayerInfo info) {
+    public String getPlayerName(NetworkPlayerInfo info) {
         String name = info.getGameProfile().getName();
         String stats = StatsCache.get(info.getGameProfile().getId());
         String full = (stats.isEmpty() ? name : stats + " " + name);
