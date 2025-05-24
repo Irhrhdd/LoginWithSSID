@@ -14,11 +14,21 @@ public class CustomTabOverlay extends GuiPlayerTabOverlay {
 
     @Override
     public String getPlayerName(NetworkPlayerInfo info) {
-        String name = info.getGameProfile().getName();
-        String stats = StatsCache.get(info.getGameProfile().getId());
-        String full = (stats.isEmpty() ? name : stats + " " + name);
+        // DEBUG: Check if this method is being called
+        String originalName = info.getGameProfile().getName();
+        String debugPrefix = "§7[DBG] ";
 
+        // Attempt to retrieve stats from the cache
+        String stats = StatsCache.get(info.getGameProfile().getId());
+
+        if (stats.isEmpty()) {
+            return debugPrefix + originalName; // Show debug tag if no stats found
+        }
+
+        String fullName = stats + " " + originalName;
         ScorePlayerTeam team = info.getPlayerTeam();
-        return team != null ? team.formatString(full) : full;
+
+        // Return formatted name with team styling if applicable
+        return team != null ? team.formatString(fullName) : fullName;
     }
 }
