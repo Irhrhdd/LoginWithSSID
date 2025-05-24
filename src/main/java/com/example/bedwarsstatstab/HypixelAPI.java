@@ -27,7 +27,8 @@ public class HypixelAPI {
             conn.setReadTimeout(3000);
             conn.setRequestMethod("GET");
 
-            JsonObject json = JsonParser.parseReader(new InputStreamReader(conn.getInputStream())).getAsJsonObject();
+            JsonParser parser = new JsonParser();
+            JsonObject json = parser.parse(new InputStreamReader(conn.getInputStream())).getAsJsonObject();
 
             if (!json.get("success").getAsBoolean()) {
                 return "[⭐ ?] (FKDR: ?)";
@@ -43,8 +44,6 @@ public class HypixelAPI {
                     .getAsJsonObject("Bedwars");
 
             int star = bedwars.has("Experience") ? getStarFromExp(bedwars.get("Experience").getAsDouble()) : 0;
-            int wins = bedwars.has("wins_bedwars") ? bedwars.get("wins_bedwars").getAsInt() : 0;
-            int losses = bedwars.has("losses_bedwars") ? bedwars.get("losses_bedwars").getAsInt() : 0;
             double fkdr = calculateFKDR(bedwars);
 
             return String.format("[⭐ %d] (FKDR: %.2f)", star, fkdr);
@@ -62,4 +61,4 @@ public class HypixelAPI {
         int fd = bw.has("final_deaths_bedwars") ? bw.get("final_deaths_bedwars").getAsInt() : 1;
         return fd == 0 ? fk : (double) fk / fd;
     }
-}  // <-- This is the missing closing brace for the class
+}
