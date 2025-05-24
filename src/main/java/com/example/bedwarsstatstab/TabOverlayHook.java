@@ -1,48 +1,45 @@
 package com.example.bedwarsstatstab;
 
-import com.mojang.realmsclient.gui.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiPlayerTabOverlay;
-import net.minecraft.client.gui.GuiIngame;
 import net.minecraft.client.network.NetworkPlayerInfo;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.IChatComponent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Collection;
+import java.util.UUID;
 
 public class TabOverlayHook {
+
     private final Minecraft mc = Minecraft.getMinecraft();
 
+    public TabOverlayHook() {
+        MinecraftForge.EVENT_BUS.register(this);
+    }
+
     @SubscribeEvent
-    public void onRender(RenderGameOverlayEvent.Text event) {
-        if (mc.theWorld == null || mc.thePlayer == null) return;
+    public void onRenderOverlay(RenderGameOverlayEvent.Text event) {
         if (!mc.gameSettings.keyBindPlayerList.isKeyDown()) return;
+        if (mc.theWorld == null || mc.thePlayer == null) return;
 
-        List<NetworkPlayerInfo> players = mc.getNetHandler().getPlayerInfoMap().stream()
-            .sorted(Comparator.comparing(info -> info.getGameProfile().getName()))
-            .collect(Collectors.toList());
+        Collection<NetworkPlayerInfo> players = mc.getNetHandler().getPlayerInfoMap();
 
-        GuiIngame guiIngame = mc.ingameGUI;
-        GuiPlayerTabOverlay tab = new GuiPlayerTabOverlay(mc, guiIngame);
-
-        int y = 10;
         for (NetworkPlayerInfo info : players) {
-            String name = tab.getPlayerName(info);
-            BedWarsStats stats = HypixelAPI.getCachedStats(info.getGameProfile().getId());
+            UUID uuid = info.getGameProfile().getId();
+            BedWarsStats stats = HypixelAPI.getCachedStats(uuid);
 
-            String line;
-            if (stats != null) {
-                line = ChatFormatting.YELLOW + "[⭐ " + stats.star + "] " +
-                       ChatFormatting.RESET + name +
-                       ChatFormatting.GRAY + " (FKDR: " + stats.fkdr + ")";
-            } else {
-                line = name;
+            if (stats == null) {
+                HypixelAPI.fetchStatsAsync(uuid);
+                continue;
             }
 
-            mc.fontRendererObj.drawStringWithShadow(line, 10, y, 0xFFFFFF);
-            y += 10;
+            String name = info.getGameProfile().getName();
+            String formatted = String.format("§6[⭐ %d] §f%s §7(FKDR: %.2f)", stats.getStars(), name, stats.getFkdr());
+
+            // Update the display name (NOTE: this may not affect the actual tab list in Forge 1.8.9)
+            info.displayName = new ChatComponentText(formatted);
         }
     }
 }
