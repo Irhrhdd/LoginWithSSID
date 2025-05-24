@@ -1,21 +1,45 @@
 package com.example.bedwarsstatstab;
 
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.network.NetworkPlayerInfo;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.IChatComponent;
+import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
-@Mod(modid = BedWarsStatsTab.MODID, name = BedWarsStatsTab.NAME, version = BedWarsStatsTab.VERSION)
-public class BedWarsStatsTab {
-    public static final String MODID = "bedwarsstatstab";
-    public static final String NAME = "BedWars Stats Tab";
-    public static final String VERSION = "1.0";
+import java.util.Collection;
+import java.util.UUID;
 
-    @Mod.EventHandler
-    public void init(FMLInitializationEvent event) {
-        // Register the event handler for rendering the custom tab info
-        MinecraftForge.EVENT_BUS.register(new TabOverlayHook());
+public class TabOverlayHook {
 
-        // Register the command for setting the API key
-        CommandSetApiKey.register();
+    private final Minecraft mc = Minecraft.getMinecraft();
+
+    public TabOverlayHook() {
+        MinecraftForge.EVENT_BUS.register(this);
+    }
+
+    @SubscribeEvent
+    public void onRenderOverlay(RenderGameOverlayEvent.Text event) {
+        if (!mc.gameSettings.keyBindPlayerList.isKeyDown()) return;
+        if (mc.theWorld == null || mc.thePlayer == null) return;
+
+        Collection<NetworkPlayerInfo> players = mc.getNetHandler().getPlayerInfoMap();
+
+        for (NetworkPlayerInfo info : players) {
+            UUID uuid = info.getGameProfile().getId();
+            BedWarsStats stats = HypixelAPI.getCachedStats(uuid);
+
+            if (stats == null) {
+                HypixelAPI.fetchStatsAsync(uuid);
+                continue;
+            }
+
+            String name = info.getGameProfile().getName();
+            String formatted = String.format("§6[⭐ %d] §f%s §7(FKDR: %.2f)", stats.getStars(), name, stats.getFkdr());
+
+            // Update the display name (NOTE: this may not affect the actual tab list in Forge 1.8.9)
+            info.displayName = new ChatComponentText(formatted);
+        }
     }
 }
