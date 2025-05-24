@@ -2,63 +2,68 @@ package com.example.bedwarsstatstab;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class HypixelAPI {
-    private static String apiKey = null;
+    private static final ExecutorService executor = Executors.newFixedThreadPool(2);
+    private static String apiKey = "";
 
     public static void setApiKey(String key) {
         apiKey = key;
     }
 
-    public static String getFormattedStats(UUID uuid) {
-        if (apiKey == null || apiKey.isEmpty()) {
-            return "[⭐ ?] (FKDR: ?)";
-        }
+    public static void fetchAndCachePlayerStats(UUID uuid) {
+        if (apiKey == null || apiKey.isEmpty()) return;
 
-        try {
-            URL url = new URL("https://api.hypixel.net/player?key=" + apiKey + "&uuid=" + uuid.toString().replace("-", ""));
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setConnectTimeout(3000);
-            conn.setReadTimeout(3000);
-            conn.setRequestMethod("GET");
+        executor.submit(() -> {
+            try {
+                String uuidStr = uuid.toString().replace("-", "");
+                // Build URL for Hypixel API player stats
+                URL url = new URL("https://api.hypixel.net/player?key=" + apiKey + "&uuid=" + uuidStr);
 
-            JsonParser parser = new JsonParser();
-            JsonObject json = parser.parse(new InputStreamReader(conn.getInputStream())).getAsJsonObject();
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
 
-            if (!json.get("success").getAsBoolean()) {
-                return "[⭐ ?] (FKDR: ?)";
+                InputStreamReader reader = new InputStreamReader(conn.getInputStream());
+                JsonObject json = new JsonParser().parse(reader).getAsJsonObject();
+                reader.close();
+
+                if (json.has("success") && json.get("success").getAsBoolean()) {
+                    JsonObject player = json.getAsJsonObject("player");
+                    if (player != null) {
+                        JsonObject stats = player.getAsJsonObject("stats");
+                        if (stats != null) {
+                            JsonObject bedwars = stats.getAsJsonObject("Bedwars");
+                            if (bedwars != null) {
+                                int stars = bedwars.has("stars") ? bedwars.get("stars").getAsInt() : 0;
+                                double fkdr = 0.0;
+                                int finalKills = bedwars.has("final_kills_bedwars") ? bedwars.get("final_kills_bedwars").getAsInt() : 0;
+                                int finalDeaths = bedwars.has("final_deaths_bedwars") ? bedwars.get("final_deaths_bedwars").getAsInt() : 0;
+                                if (finalDeaths != 0) {
+                                    fkdr = (double) finalKills / finalDeaths;
+                                }
+
+                                String formattedStats = "[⭐ " + stars + "] (FKDR: " + String.format("%.2f", fkdr) + ")";
+                                StatsCache.put(uuid, formattedStats);
+                                return;
+                            }
+                        }
+                    }
+                }
+                // If anything missing, clear cache for that uuid
+                StatsCache.put(uuid, "");
+            } catch (Exception e) {
+                // On error clear cache for that player
+                StatsCache.put(uuid, "");
+                e.printStackTrace();
             }
-
-            JsonObject player = json.getAsJsonObject("player");
-            if (player == null || !player.has("stats")) {
-                return "[⭐ 0] (FKDR: 0.00)";
-            }
-
-            JsonObject bedwars = player
-                    .getAsJsonObject("stats")
-                    .getAsJsonObject("Bedwars");
-
-            int star = bedwars.has("Experience") ? getStarFromExp(bedwars.get("Experience").getAsDouble()) : 0;
-            double fkdr = calculateFKDR(bedwars);
-
-            return String.format("[⭐ %d] (FKDR: %.2f)", star, fkdr);
-        } catch (Exception e) {
-            return "[⭐ ?] (FKDR: ?)";
-        }
-    }
-
-    private static int getStarFromExp(double exp) {
-        return (int) Math.floor(exp / 5000); // simple linear estimate
-    }
-
-    private static double calculateFKDR(JsonObject bw) {
-        int fk = bw.has("final_kills_bedwars") ? bw.get("final_kills_bedwars").getAsInt() : 0;
-        int fd = bw.has("final_deaths_bedwars") ? bw.get("final_deaths_bedwars").getAsInt() : 1;
-        return fd == 0 ? fk : (double) fk / fd;
+        });
     }
 }
