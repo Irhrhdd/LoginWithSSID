@@ -11,6 +11,7 @@ import java.util.Collection;
 import java.util.UUID;
 
 public class TabOverlayHook {
+
     private final Minecraft mc = Minecraft.getMinecraft();
 
     public TabOverlayHook() {
@@ -36,7 +37,8 @@ public class TabOverlayHook {
             String name = info.getGameProfile().getName();
             String formatted = String.format("§6[⭐ %d] §f%s §7(FKDR: %.2f)", stats.getStars(), name, stats.getFkdr());
 
-            info.displayName = new ChatComponentText(formatted);
+            // Use the setter method instead of direct field access
+            info.setDisplayName(new ChatComponentText(formatted));
         }
     }
 }
