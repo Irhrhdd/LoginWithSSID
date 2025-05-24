@@ -7,25 +7,34 @@ import net.minecraft.util.ChatComponentText;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
-import java.util.Collection;
 import java.util.UUID;
 
 public class TabOverlayHook {
     private Minecraft mc = Minecraft.getMinecraft();
+    private long lastUpdateTime = 0;
 
     @SubscribeEvent
     public void onRenderGameOverlay(RenderGameOverlayEvent.Pre event) {
         if (event.type != RenderGameOverlayEvent.ElementType.PLAYER_LIST) return;
         if (mc.thePlayer == null || mc.theWorld == null) return;
 
-        Collection<NetworkPlayerInfo> players = mc.getNetHandler().getPlayerInfoMap();
+        long now = System.currentTimeMillis();
+        if (now - lastUpdateTime > 30000) { // 30 seconds cooldown
+            lastUpdateTime = now;
 
-        for (NetworkPlayerInfo info : players) {
+            for (NetworkPlayerInfo info : mc.getNetHandler().getPlayerInfoMap()) {
+                UUID uuid = info.getGameProfile().getId();
+                HypixelAPI.fetchAndCachePlayerStats(uuid);
+            }
+        }
+
+        for (NetworkPlayerInfo info : mc.getNetHandler().getPlayerInfoMap()) {
             UUID uuid = info.getGameProfile().getId();
             String name = info.getGameProfile().getName();
 
-            String stats = HypixelAPI.getFormattedStats(uuid);
-            String fullName = stats + " " + name;
+            String stats = StatsCache.get(uuid);
+
+            String fullName = stats.isEmpty() ? name : stats + " " + name;
 
             ScorePlayerTeam team = info.getPlayerTeam();
             ChatComponentText chatName = new ChatComponentText(team != null ? team.formatString(fullName) : fullName);
