@@ -62,3 +62,4 @@ public class HypixelAPI {
         int fd = bw.has("final_deaths_bedwars") ? bw.get("final_deaths_bedwars").getAsInt() : 1;
         return fd == 0 ? fk : (double) fk / fd;
     }
+}  // <-- This is the missing closing brace for the class
