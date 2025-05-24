@@ -16,24 +16,26 @@ public class BedWarsStatsTab {
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
-        Minecraft mc = Minecraft.getMinecraft();
-        GuiIngame ingameGUI = mc.ingameGUI;
-
         try {
+            Minecraft mc = Minecraft.getMinecraft();
+            GuiIngame ingameGUI = mc.ingameGUI;
+
+            // Loop through fields to find the GuiPlayerTabOverlay
             for (Field field : GuiIngame.class.getDeclaredFields()) {
                 if (GuiPlayerTabOverlay.class.isAssignableFrom(field.getType())) {
                     field.setAccessible(true);
                     field.set(ingameGUI, new CustomTabOverlay(mc, ingameGUI));
-                    System.out.println("[BedWarsStatsTab] Successfully injected custom tab overlay into field: " + field.getName());
+                    GuiPlayerTabOverlay test = (GuiPlayerTabOverlay) field.get(ingameGUI);
+                    System.out.println("[BedWarsStatsTab] Successfully injected CustomTabOverlay into: " + field.getName());
+                    System.out.println("[BedWarsStatsTab] Overlay class now: " + test.getClass().getName());
                     break;
                 }
             }
         } catch (Exception e) {
-            System.err.println("[BedWarsStatsTab] Failed to inject custom tab overlay.");
             e.printStackTrace();
         }
 
-        // Register the /bwstats command
+        // Register command
         CommandSetApiKey.register();
     }
 }
