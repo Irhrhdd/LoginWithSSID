@@ -7,14 +7,13 @@ import net.minecraft.client.Minecraft;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class HypixelAPI {
-
     private static String apiKey = "";
-    private static final Map<UUID, BedWarsStats> cache = new HashMap<>();
+    private static final Map<UUID, BedWarsStats> cache = new ConcurrentHashMap<>();
 
     public static void setApiKey(String key) {
         apiKey = key;
@@ -25,37 +24,29 @@ public class HypixelAPI {
     }
 
     public static void fetchStatsAsync(UUID uuid) {
-        // If already cached, skip
-        if (cache.containsKey(uuid)) return;
-
         new Thread(() -> {
             try {
-                URL url = new URL("https://api.hypixel.net/player?key=" + apiKey + "&uuid=" + uuid.toString().replace("-", ""));
+                URL url = new URL("https://api.hypixel.net/player?key=" + apiKey + "&uuid=" + uuid.toString());
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
-                conn.setConnectTimeout(5000);
-                conn.setReadTimeout(5000);
 
-                InputStreamReader reader = new InputStreamReader(conn.getInputStream());
-                JsonParser parser = new JsonParser(); // Compatible with GSON 2.2.4
-                JsonObject json = parser.parse(reader).getAsJsonObject();
-                reader.close();
+                JsonObject json = JsonParser.parseReader(new InputStreamReader(conn.getInputStream())).getAsJsonObject();
 
-                JsonObject player = json.getAsJsonObject("player");
-                if (player != null && player.has("stats")) {
-                    JsonObject stats = player.getAsJsonObject("stats").getAsJsonObject("Bedwars");
+                if (json.get("success").getAsBoolean()) {
+                    JsonObject player = json.getAsJsonObject("player");
+                    if (player != null && player.has("stats")) {
+                        JsonObject stats = player.getAsJsonObject("stats").getAsJsonObject("Bedwars");
 
-                    int star = player.has("achievements") ? player.getAsJsonObject("achievements").get("bedwars_level").getAsInt() : 0;
-                    int fk = stats.has("final_kills_bedwars") ? stats.get("final_kills_bedwars").getAsInt() : 0;
-                    int fd = stats.has("final_deaths_bedwars") ? stats.get("final_deaths_bedwars").getAsInt() : 1;
-                    double fkdr = fd == 0 ? fk : (double) fk / fd;
+                        int stars = stats.has("Experience") ? stats.get("Experience").getAsInt() / 500 : 0;
+                        int finalKills = stats.has("final_kills_bedwars") ? stats.get("final_kills_bedwars").getAsInt() : 0;
+                        int finalDeaths = stats.has("final_deaths_bedwars") ? stats.get("final_deaths_bedwars").getAsInt() : 1;
+                        double fkdr = finalKills / (double) finalDeaths;
 
-                    BedWarsStats bedWarsStats = new BedWarsStats(star, fkdr);
-                    cache.put(uuid, bedWarsStats);
+                        cache.put(uuid, new BedWarsStats(stars, fkdr));
+                    }
                 }
             } catch (Exception e) {
-                Minecraft.getMinecraft().thePlayer.addChatMessage(
-                        new net.minecraft.util.ChatComponentText("§c[BedWarsStatsTab] Failed to fetch stats for UUID: " + uuid));
+                Minecraft.getMinecraft().thePlayer.addChatMessage(new ChatComponentText("§c[BedWarsStatsTab] Failed to fetch stats"));
             }
         }).start();
     }
