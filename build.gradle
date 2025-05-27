@@ -1,8 +1,9 @@
 buildscript {
     repositories {
-        mavenCentral()
         maven { url = 'https://maven.minecraftforge.net' }
         maven { url = 'https://oss.sonatype.org/content/repositories/snapshots' }
+        mavenCentral()
+        jcenter() // Legacy, but ForgeGradle 2.3 sometimes requires it
     }
     dependencies {
         classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
