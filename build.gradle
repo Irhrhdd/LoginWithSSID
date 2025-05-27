@@ -1,38 +1,64 @@
 buildscript {
     repositories {
-        jcenter()
-        maven {
-            name = "forge"
-            url = "https://files.minecraftforge.net/maven"
-        }
+        mavenCentral()
+        maven { url = 'https://files.minecraftforge.net/maven' }
+        maven { url = 'https://oss.sonatype.org/content/repositories/snapshots' }
     }
     dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT'
+        classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
     }
 }
 
-apply plugin: 'net.minecraftforge.gradle.forge'
+apply plugin: 'net.minecraftforge.gradle'
 
-version = findProperty("mod_version") ?: "1.0"
-group = "com.example." + (findProperty("mod_id") ?: "bedwarsstatstab")
-archivesBaseName = (findProperty("mod_name") ?: "BedWarsStatsTab").replaceAll(" ", "")
-
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+group = 'com.example' // Replace with your mod's group
+version = '1.0' // Replace with your mod's version
+archivesBaseName = 'sessiontokenmod' // Replace with your mod's name
 
 minecraft {
-    version = "1.8.9-11.15.1.2318-1.8.9"
-    runDir = "run"
-    mappings = "stable_22"
-    makeObfSourceJar = false
+    version = "1.8.9-11.15.1.2318" // Minecraft version
+    runs {
+        client {
+            workingDirectory = file('run')
+        }
+        server {
+            workingDirectory = file('run')
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://files.minecraftforge.net/maven' }
+}
+
+dependencies {
+    minecraft 'net.minecraftforge:forge:1.8.9-11.15.1.2318'
+    // Add any additional dependencies here
 }
 
 processResources {
-    inputs.property "version", project.version
-    inputs.property "mcversion", "1.8.9"
-
+    inputs.property 'maven.version', project.property('version')
+    inputs.property 'minecraft.version', project.property('minecraft.version')
     from(sourceSets.main.resources.srcDirs) {
-        include 'mcmod.info'
-        expand 'version': project.version, 'mcversion': "1.8.9"
+        include '**/*.json', '**/*.properties'
     }
+}
+
+jar {
+    manifest {
+        attributes(
+            'Main-Class': 'com.example.sessiontokenmod.SessionTokenMod' // Replace with your main class
+        )
+    }
+}
+
+task runClient(type: JavaExec) {
+    main = 'net.minecraft.client.main.Main'
+    args = ['--username', 'Player', '--version', '1.8.9', '--gameDir', '.', '--assetsDir', '.', '--assetIndex', '1.8', '--uuid', '1234', '--accessToken', '5678', '--userProperties', '{}', '--userType', 'mojang']
+}
+
+task runServer(type: JavaExec) {
+    main = 'net.minecraft.server.MinecraftServer'
+    args = ['nogui']
 }
