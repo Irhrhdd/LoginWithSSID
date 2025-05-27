@@ -2,6 +2,7 @@ buildscript {
     repositories {
         mavenCentral()
         maven { url = 'https://maven.minecraftforge.net' }
+        maven { url = 'https://oss.sonatype.org/content/repositories/snapshots' }
     }
     dependencies {
         classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
@@ -10,7 +11,7 @@ buildscript {
 
 apply plugin: 'net.minecraftforge.gradle'
 
-group = 'com.example' // Replace with your package name
+group = 'com.example'
 version = '1.0'
 archivesBaseName = 'sessiontokenmod'
 
@@ -29,7 +30,6 @@ repositories {
 }
 
 dependencies {
-    // Core dependency on Forge
     minecraft 'net.minecraftforge:forge:1.8.9-11.15.1.2318-1.8.9'
 }
 
@@ -44,7 +44,7 @@ processResources {
 jar {
     manifest {
         attributes(
-            'Main-Class': 'com.example.sessiontokenmod.SessionTokenMod' // Replace with your main class
+            'Main-Class': 'com.example.sessiontokenmod.SessionTokenMod'
         )
     }
 }
