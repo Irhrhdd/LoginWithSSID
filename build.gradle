@@ -1,8 +1,7 @@
 buildscript {
     repositories {
         mavenCentral()
-        maven { url = 'https://files.minecraftforge.net/maven' }
-        maven { url = 'https://oss.sonatype.org/content/repositories/snapshots' }
+        maven { url = 'https://maven.minecraftforge.net' }
     }
     dependencies {
         classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
@@ -11,35 +10,32 @@ buildscript {
 
 apply plugin: 'net.minecraftforge.gradle'
 
-group = 'com.example' // Replace with your mod's group
-version = '1.0' // Replace with your mod's version
-archivesBaseName = 'sessiontokenmod' // Replace with your mod's name
+group = 'com.example' // Replace with your package name
+version = '1.0'
+archivesBaseName = 'sessiontokenmod'
+
+sourceCompatibility = targetCompatibility = '1.8'
 
 minecraft {
-    version = "1.8.9-11.15.1.2318" // Minecraft version
-    runs {
-        client {
-            workingDirectory = file('run')
-        }
-        server {
-            workingDirectory = file('run')
-        }
-    }
+    version = "1.8.9-11.15.1.2318-1.8.9"
+    runDir = "run"
+    mappings = "stable_22"
+    makeObfSourceJar = false
 }
 
 repositories {
     mavenCentral()
-    maven { url = 'https://files.minecraftforge.net/maven' }
+    maven { url = 'https://maven.minecraftforge.net' }
 }
 
 dependencies {
-    minecraft 'net.minecraftforge:forge:1.8.9-11.15.1.2318'
-    // Add any additional dependencies here
+    // Core dependency on Forge
+    minecraft 'net.minecraftforge:forge:1.8.9-11.15.1.2318-1.8.9'
 }
 
 processResources {
-    inputs.property 'maven.version', project.property('version')
-    inputs.property 'minecraft.version', project.property('minecraft.version')
+    inputs.property 'version', project.version
+    inputs.property 'mcversion', project.minecraft.version
     from(sourceSets.main.resources.srcDirs) {
         include '**/*.json', '**/*.properties'
     }
@@ -51,14 +47,4 @@ jar {
             'Main-Class': 'com.example.sessiontokenmod.SessionTokenMod' // Replace with your main class
         )
     }
-}
-
-task runClient(type: JavaExec) {
-    main = 'net.minecraft.client.main.Main'
-    args = ['--username', 'Player', '--version', '1.8.9', '--gameDir', '.', '--assetsDir', '.', '--assetIndex', '1.8', '--uuid', '1234', '--accessToken', '5678', '--userProperties', '{}', '--userType', 'mojang']
-}
-
-task runServer(type: JavaExec) {
-    main = 'net.minecraft.server.MinecraftServer'
-    args = ['nogui']
 }
